@@ -1,5 +1,14 @@
-import { X, Globe, History, LogOut, Trash2, MessageSquarePlus, User as UserIcon } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import {
+  X,
+  Globe,
+  History,
+  LogOut,
+  Trash2,
+  MessageSquarePlus,
+  User as UserIcon,
+} from "lucide-react";
+
+import { useState } from "react";
 
 interface Chat {
   id: string;
@@ -24,6 +33,16 @@ interface SidebarProps {
   user: any;
 }
 
+const theme = {
+  main: "#0B3C6C",
+  accent: "#F5C629",
+  background: "#F0F8FF",
+  text: "#0B3C6C",
+  subtext: "#4B5563",
+  card: "#DCEAF8",
+  elevated: "#C7D9EA",
+};
+
 export function Sidebar({
   isOpen,
   onClose,
@@ -36,20 +55,22 @@ export function Sidebar({
   onNewChat,
   chats,
   currentChatId,
-  user
+  user,
 }: SidebarProps) {
-  const [activeTab, setActiveTab] = useState<'language' | 'history'>('language');
+  const [activeTab, setActiveTab] = useState<"language" | "history">(
+    "language"
+  );
 
   const languages = [
-    { code: 'english', label: 'English', flag: '🇬🇧' },
-    { code: 'tagalog', label: 'Tagalog', flag: '🇵🇭' },
-    { code: 'bisaya', label: 'Bisaya', flag: '🇵🇭' }
+    { code: "english", label: "English", flag: "🇬🇧" },
+    { code: "tagalog", label: "Tagalog", flag: "🇵🇭" },
+    { code: "bisaya", label: "Bisaya", flag: "🇵🇭" },
   ];
 
   const getPreviewText = (messages: any[]) => {
-    if (!messages || messages.length === 0) return 'New conversation';
-    const firstUserMessage = messages.find(m => m.role === 'user');
-    return firstUserMessage?.content.substring(0, 50) + '...' || 'New conversation';
+    if (!messages || messages.length === 0) return "New conversation";
+    const firstUserMessage = messages.find((m) => m.role === "user");
+    return firstUserMessage?.content.substring(0, 50) + "..." || "New conversation";
   };
 
   const formatDate = (dateString: string) => {
@@ -68,98 +89,137 @@ export function Sidebar({
 
   return (
     <>
-      {/* Overlay */}
+      {/* overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          className="fixed inset-0 bg-black/40 z-40"
           onClick={onClose}
         />
       )}
 
-      {/* Sidebar */}
+      {/* SIDEBAR */}
       <div
-        className={`fixed top-0 left-0 h-full w-full sm:w-80 bg-white shadow-2xl z-50 transform transition-transform duration-300 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-0 left-0 h-full w-full sm:w-80 z-50 transform transition-transform duration-300 shadow-xl`}
+        style={{
+          backgroundColor: theme.background,
+          boxShadow: "4px 0px 12px rgba(0,0,0,0.15)",
+          transform: isOpen ? "translateX(0)" : "translateX(-100%)",
+        }}
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4">
-            <div className="flex items-center justify-between">
-              <h2>Settings</h2>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+
+          {/* HEADER */}
+          <div
+            className="flex items-center justify-between px-4 py-4"
+            style={{ backgroundColor: theme.main }}
+          >
+            <h2 className="text-white font-bold text-lg">Settings</h2>
+
+            <button className="p-2 rounded" onClick={onClose}>
+              <X className="text-white w-5 h-5" />
+            </button>
           </div>
 
-          {/* User Profile Section */}
+          {/* USER SECTION */}
           {!isFreeMode && user && (
-            <div className="bg-gradient-to-b from-blue-50 to-white border-b border-gray-200 px-4 py-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white flex-shrink-0">
-                  <UserIcon className="w-6 h-6" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-gray-900 truncate">
-                    {user.user_metadata?.name || 'User'}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">
-                    {user.email}
-                  </p>
-                </div>
+            <div
+              className="flex items-center gap-3 px-4 py-4 border-b"
+              style={{
+                backgroundColor: theme.card,
+                borderColor: theme.elevated,
+              }}
+            >
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: theme.main }}
+              >
+                <UserIcon className="text-white w-6 h-6" />
+              </div>
+
+              <div className="flex-1">
+                <p
+                  className="font-bold truncate"
+                  style={{ color: theme.main }}
+                >
+                  {user.user_metadata?.name || "User"}
+                </p>
+                <p
+                  className="text-xs truncate"
+                  style={{ color: theme.subtext }}
+                >
+                  {user.email}
+                </p>
               </div>
             </div>
           )}
 
-          {/* Tabs */}
+          {/* TABS */}
           {!isFreeMode && (
-            <div className="flex border-b border-gray-200">
-              <button
-                onClick={() => setActiveTab('language')}
-                className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === 'language'
-                    ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <Globe className="w-4 h-4" />
-                <span className="text-sm">Language</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('history')}
-                className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === 'history'
-                    ? 'border-b-2 border-blue-600 text-blue-600'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <History className="w-4 h-4" />
-                <span className="text-sm">History</span>
-              </button>
+            <div
+              className="flex border-b"
+              style={{ borderColor: theme.elevated }}
+            >
+              {["language", "history"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab as any)}
+                  className="flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-colors"
+                  style={{
+                    color:
+                      activeTab === tab ? theme.main : theme.subtext,
+                    borderBottom:
+                      activeTab === tab ? `3px solid ${theme.accent}` : "3px solid transparent",
+                    fontWeight: activeTab === tab ? "bold" : "500",
+                  }}
+                >
+                  {tab === "language" ? (
+                    <Globe className="w-4 h-4" />
+                  ) : (
+                    <History className="w-4 h-4" />
+                  )}
+                  <span className="text-sm capitalize">{tab}</span>
+                </button>
+              ))}
             </div>
           )}
 
-          {/* Content */}
+          {/* CONTENT */}
           <div className="flex-1 overflow-y-auto">
             {isFreeMode ? (
               <div className="p-6 text-center">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-4">
-                  <h3 className="text-gray-900 mb-2">Free Mode</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                <div
+                  className="p-6 rounded-lg mb-4"
+                  style={{
+                    backgroundColor: theme.card,
+                    border: `1px solid ${theme.elevated}`,
+                  }}
+                >
+                  <h3
+                    className="font-bold"
+                    style={{ color: theme.main }}
+                  >
+                    Free Mode
+                  </h3>
+                  <p
+                    className="text-sm mt-2"
+                    style={{ color: theme.subtext }}
+                  >
                     Sign in to unlock chat history and language preferences
                   </p>
                 </div>
-                <p className="text-xs text-gray-500">
-                  ⚠️ Your conversations are not saved in free mode
+                <p className="text-xs" style={{ color: theme.subtext }}>
+                  ⚠ Your conversations are not saved in free mode
                 </p>
               </div>
-            ) : activeTab === 'language' ? (
+            ) : activeTab === "language" ? (
               <div className="p-4">
-                <p className="text-sm text-gray-600 mb-4">Select your preferred language:</p>
+                <p
+                  className="text-sm mb-4"
+                  style={{ color: theme.subtext }}
+                >
+                  Select your preferred language:
+                </p>
+
                 <div className="space-y-2">
                   {languages.map((lang) => (
                     <button
@@ -168,16 +228,20 @@ export function Sidebar({
                         onLanguageChange(lang.code);
                         onClose();
                       }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                        language === lang.code
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                      }`}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
+                      style={{
+                        backgroundColor:
+                          language === lang.code
+                            ? theme.accent
+                            : theme.elevated,
+                        color: theme.main,
+                        fontWeight: "600",
+                      }}
                     >
                       <span className="text-2xl">{lang.flag}</span>
                       <span>{lang.label}</span>
                       {language === lang.code && (
-                        <span className="ml-auto text-xs">✓</span>
+                        <span className="ml-auto font-bold">✓</span>
                       )}
                     </button>
                   ))}
@@ -185,80 +249,120 @@ export function Sidebar({
               </div>
             ) : (
               <div className="flex flex-col h-full">
-                {/* New Chat Button */}
-                <div className="p-4 border-b border-gray-200">
+                {/* New Chat */}
+                <div
+                  className="p-4 border-b"
+                  style={{ borderColor: theme.elevated }}
+                >
                   <button
                     onClick={() => {
                       onNewChat();
                       onClose();
                     }}
-                    className="w-full flex items-center gap-2 justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all"
+                    style={{
+                      backgroundColor: theme.main,
+                      color: "white",
+                      fontWeight: "bold",
+                    }}
                   >
                     <MessageSquarePlus className="w-4 h-4" />
-                    <span className="text-sm">New Chat</span>
+                    New Chat
                   </button>
                 </div>
 
-                {/* Chat History List */}
-                <div className="flex-1 overflow-y-auto p-4">
+                {/* Chat List */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {chats.length === 0 ? (
                     <div className="text-center py-8">
-                      <History className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500">No chat history yet</p>
+                      <History
+                        className="w-12 h-12 mx-auto mb-2"
+                        style={{ color: theme.elevated }}
+                      />
+                      <p style={{ color: theme.subtext }}>
+                        No chat history yet
+                      </p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {chats.filter(chat => chat && chat.id).map((chat) => (
-                        <div
-                          key={chat.id}
-                          className={`group relative p-3 rounded-lg transition-colors cursor-pointer ${
+                    chats.map((chat) => (
+                      <div
+                        key={chat.id}
+                        onClick={() => {
+                          onLoadChat(chat);
+                          onClose();
+                        }}
+                        className="relative p-3 rounded-lg cursor-pointer transition-all group"
+                        style={{
+                          backgroundColor:
                             currentChatId === chat.id
-                              ? 'bg-blue-50 border border-blue-200'
-                              : 'bg-gray-50 hover:bg-gray-100'
-                          }`}
-                          onClick={() => {
-                            onLoadChat(chat);
-                            onClose();
+                              ? theme.accent
+                              : theme.card,
+                          border:
+                            currentChatId === chat.id
+                              ? `1px solid ${theme.elevated}`
+                              : "none",
+                        }}
+                      >
+                        <p
+                          className="text-sm pr-8 line-clamp-2"
+                          style={{ color: theme.main }}
+                        >
+                          {getPreviewText(chat.messages)}
+                        </p>
+
+                        <div className="flex items-center justify-between mt-2">
+                          <span
+                            className="text-xs"
+                            style={{ color: theme.subtext }}
+                          >
+                            {formatDate(chat.updatedAt)}
+                          </span>
+                          <span
+                            className="text-xs uppercase"
+                            style={{ color: theme.subtext }}
+                          >
+                            {chat.language}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteChat(chat.id);
+                          }}
+                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded transition-all"
+                          style={{
+                            backgroundColor: "#FEE2E2",
+                            color: "#B91C1C",
                           }}
                         >
-                          <p className="text-sm text-gray-900 pr-8 line-clamp-2">
-                            {getPreviewText(chat.messages)}
-                          </p>
-                          <div className="flex items-center justify-between mt-2">
-                            <span className="text-xs text-gray-500">
-                              {formatDate(chat.updatedAt)}
-                            </span>
-                            <span className="text-xs text-gray-400 uppercase">
-                              {chat.language}
-                            </span>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteChat(chat.id);
-                            }}
-                            className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded transition-all"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Footer */}
+          {/* FOOTER */}
           {!isFreeMode && (
-            <div className="border-t border-gray-200 p-4">
+            <div
+              className="p-4 border-t"
+              style={{ borderColor: theme.elevated }}
+            >
               <button
                 onClick={onLogout}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-all"
+                style={{
+                  backgroundColor: "#FEE2E2",
+                  color: "#B91C1C",
+                  fontWeight: "bold",
+                }}
               >
                 <LogOut className="w-4 h-4" />
-                <span className="text-sm">Sign Out</span>
+                Sign Out
               </button>
             </div>
           )}
