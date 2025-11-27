@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import mainIcon from "./assets/mainlogo.png";
+import { supabase } from "../utils/supabase/client";
+import { projectId, publicAnonKey } from "../utils/supabase/info";
 
 export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,6 +16,7 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
   const [nameValid, setNameValid] = useState(true);
 
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     setIsSignUp(Boolean(initialIsSignUp));
@@ -25,7 +28,7 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
     return emailRegex.test(value) || phoneRegex.test(value);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const emailOK = validateEmailOrPhone(email);
@@ -42,9 +45,58 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
     }
 
     setError("");
+    setIsLoading(true);
+    try {
+      if (isSignUp) {
+        // Call server function to create a new user (auto-confirmed)
+        let createSuccess = false;
+        try {
+          const response = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-a76efa1a/signup`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${publicAnonKey}`,
+              },
+              body: JSON.stringify({ email, password, name }),
+            }
+          );
+          if (response.ok) {
+            createSuccess = true;
+          } else {
+            // Not fatal: we'll fall back to client-side signUp
+            console.warn('Server signup function returned error:', await response.text());
+          }
+        } catch (err) {
+          console.warn('Server signup call failed (function not deployed or network error). Falling back to client signUp', err);
+        }
 
-    if (onLogin) {
-      onLogin("dummy-access-token", { email, name });
+        if (!createSuccess) {
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+          if (signUpError) throw signUpError;
+          // For normal client signUp, the user might need to confirm via email. We'll attempt to sign them in immediately.
+        }
+
+        // Sign in after signup
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        if (signInData.session?.access_token) {
+          onLogin(signInData.session.access_token, signInData.user);
+        }
+      } else {
+        // Sign in flow
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        if (signInData.session?.access_token) {
+          onLogin(signInData.session.access_token, signInData.user);
+        }
+      }
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError(err.message || "Authentication failed");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -267,6 +319,7 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
 
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full py-3 text-sm"
             style={{
               width: 260,
@@ -275,10 +328,12 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
               fontWeight: 700,
               borderRadius: 15,
               boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-              marginTop: 16
+              marginTop: 16,
+              opacity: isLoading ? 0.6 : 1,
+              cursor: isLoading ? 'not-allowed' : 'pointer'
             }}
           >
-            {isSignUp ? "SIGN UP" : "LOGIN"}
+            {isLoading ? 'Please wait...' : (isSignUp ? 'SIGN UP' : 'LOGIN')}
           </button>
         </form>
       </div>
