@@ -31,6 +31,7 @@ interface SidebarProps {
   chats: Chat[];
   currentChatId: string;
   user: any;
+  onShowLogin?: () => void;
 }
 
 const theme = {
@@ -50,6 +51,7 @@ export function Sidebar({
   onLanguageChange,
   isFreeMode,
   onLogout,
+  onShowLogin,
   onLoadChat,
   onDeleteChat,
   onNewChat,
@@ -200,6 +202,19 @@ export function Sidebar({
                 </div>
                 <p className="text-xs" style={{ color: theme.subtext }}>
                   ⚠ Your conversations are not saved in free mode
+                </p>
+                <p className="mt-3 text-sm">
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => {
+                      if (onShowLogin) onShowLogin();
+                      onClose();
+                    }}
+                    className="underline text-sm"
+                    style={{ color: theme.main, cursor: 'pointer' }}
+                  >
+                    Sign in
+                  </button>
                 </p>
               </div>
             ) : activeTab === "language" ? (

@@ -248,6 +248,7 @@ export default function App() {
         onLoginClick={() => { setAuthMode('signin'); setShowLogin(true); setShowWelcome(false); }}
         onSignUpClick={() => { setAuthMode('signup'); setShowLogin(true); setShowWelcome(false); }}
         onContinueAsGuest={handleContinueAsFree}
+        onBack={() => { setShowWelcome(false); setShowLogin(true); }}
       />
     );
   }
@@ -256,7 +257,6 @@ export default function App() {
     return (
       <LoginPage
         onLogin={handleLogin}
-        onContinueAsFree={handleContinueAsFree}
         initialIsSignUp={authMode === 'signup'}
         onBack={() => { setShowLogin(false); setShowWelcome(true); }}
       />
@@ -278,6 +278,7 @@ export default function App() {
         onLanguageChange={setLanguage}
         isFreeMode={isFreeMode}
         onLogout={handleLogout}
+        onShowLogin={() => { setShowWelcome(false); setShowLogin(true); setIsSidebarOpen(false); }}
         onLoadChat={handleLoadChat}
         onDeleteChat={handleDeleteChat}
         onNewChat={handleNewChat}
@@ -398,8 +399,7 @@ export default function App() {
             style={{
               border: `1px solid ${theme.elevated}`,
               backgroundColor: "white",
-              color: theme.text,
-              focus: { borderColor: theme.main }
+              color: theme.text
             }}
             placeholder="Ask about Philippine law..."
             disabled={isLoading}
