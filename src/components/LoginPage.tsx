@@ -4,7 +4,14 @@ import mainIcon from "./assets/mainlogo.png";
 import { supabase } from "../utils/supabase/client";
 import { projectId, publicAnonKey } from "../utils/supabase/info";
 
-export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
+interface LoginPageProps {
+  onLogin: (accessToken: string, user: any) => void;
+  initialIsSignUp?: boolean;
+  onBack?: () => void;
+  onContinueAsFree?: () => void;
+}
+
+export function LoginPage({ onLogin, initialIsSignUp = false, onBack }: LoginPageProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,8 +35,7 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
     return emailRegex.test(value) || phoneRegex.test(value);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitAuth = async () => {
 
     const emailOK = validateEmailOrPhone(email);
     const passwordOK = password.length >= 5;
@@ -48,7 +54,7 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
     setIsLoading(true);
     try {
       if (isSignUp) {
-        // Call server function to create a new user (auto-confirmed)
+        // Call server function to create a new user (auto-confirmed) if available
         let createSuccess = false;
         try {
           const response = await fetch(
@@ -62,42 +68,104 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
               body: JSON.stringify({ email, password, name }),
             }
           );
+          const bodyText = await response.text();
+          try {
+            const bodyJson = JSON.parse(bodyText);
+            console.log('Server signup response:', response.status, bodyJson);
+          } catch { console.log('Server signup response text:', response.status, bodyText); }
           if (response.ok) {
             createSuccess = true;
           } else {
             // Not fatal: we'll fall back to client-side signUp
-            console.warn('Server signup function returned error:', await response.text());
+            console.warn('Server signup function returned error:', response.status, bodyText);
+            try {
+              const json = JSON.parse(bodyText);
+              const errMsg = json?.error || json?.message || json?.detail || bodyText;
+              setError(errMsg || 'Failed to sign up (server error)');
+              // If server says email already registered, suggest sign-in
+              if (errMsg && typeof errMsg === 'string' && errMsg.toLowerCase().includes('already')) {
+                setTimeout(() => { setIsSignUp(false); setError('');}, 1500);
+                return;
+              }
+            } catch (parseErr) {
+              // ignore parse error and continue fallback
+            }
           }
         } catch (err) {
           console.warn('Server signup call failed (function not deployed or network error). Falling back to client signUp', err);
         }
 
         if (!createSuccess) {
+          // Client side sign up
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
-          if (signUpError) throw signUpError;
-          // For normal client signUp, the user might need to confirm via email. We'll attempt to sign them in immediately.
+          if (signUpError) {
+            // Show friendly message and detailed logging for debugging
+            console.error('Client signUp error', signUpError);
+            throw new Error(signUpError.message || 'Failed to sign up');
+          }
+
+          // If signUp succeeded but no session is present, the user may need to confirm their email
+          if (signUpData?.user && !signUpData?.session) {
+            setError('Signup successful. Please check your email and confirm to sign in.');
+            return; // stop here; don't attempt sign in
+          }
+          // If the client signUp created a session, fall-through to sign-in handling below
         }
 
-        // Sign in after signup
+        // Sign in after signup (attempt automatic signin)
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
-        if (signInData.session?.access_token) {
+        if (signInError) {
+          // Handle common error reasons and show friendly messages
+          console.error('signInWithPassword after signup failed:', signInError);
+          const msg = signInError.message || 'Failed to sign in after signup';
+          if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')) {
+            setError('Invalid login credentials. Please check your email and password.');
+          } else if (msg.toLowerCase().includes('email') && msg.toLowerCase().includes('confirm')) {
+            setError('Please confirm your email before signing in.');
+          } else {
+            setError(msg);
+          }
+          return;
+        }
+
+        if (signInData?.session?.access_token) {
           onLogin(signInData.session.access_token, signInData.user);
+          return;
         }
       } else {
         // Sign in flow
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
+        if (signInError) {
+          console.error('Sign in failed:', signInError);
+          const msg = signInError.message || 'Failed to sign in';
+          if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')) {
+            setError('Invalid email or password.');
+          } else {
+            setError(msg);
+          }
+          return;
+        }
         if (signInData.session?.access_token) {
           onLogin(signInData.session.access_token, signInData.user);
+          return;
         }
       }
     } catch (err: any) {
       console.error('Auth error:', err);
-      setError(err.message || "Authentication failed");
+      const msg = err?.message || String(err) || 'Authentication failed';
+      if (msg.toLowerCase().includes('failed to fetch') || msg.toLowerCase().includes('network')) {
+        setError('Network error contacting the server. Please check your connection and try again.');
+      } else {
+        setError(msg);
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    submitAuth();
   };
 
   return (
@@ -306,14 +374,25 @@ export function LoginPage({ onLogin, initialIsSignUp = false, onBack }) {
           {error && (
             <div
               style={{
-                color: "#E63946",
+                color: "var(--brand-danger)",
                 fontSize: 12,
                 marginTop: 6,
                 textAlign: "center",
-                width: 260
+                width: 260,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8
               }}
             >
-              {error}
+              <span>{error}</span>
+              <button
+                onClick={() => submitAuth()}
+                className="underline text-sm"
+                style={{ color: 'var(--brand-blue)' }}
+              >
+                Retry
+              </button>
             </div>
           )}
 
