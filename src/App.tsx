@@ -5,6 +5,7 @@ import { ChatMessage } from './components/ChatMessage';
 import { TypingIndicator } from './components/TypingIndicator';
 import { SuggestedQuestions } from './components/SuggestedQuestions';
 import { LoginPage } from './components/LoginPage';
+import WelcomeScreen from './components/WelcomeScreen';
 import { Sidebar } from './components/Sidebar';
 import { QuickActions } from './components/QuickActions';
 import { projectId, publicAnonKey } from './utils/supabase/info';
@@ -29,7 +30,10 @@ export default function App() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [isFreeMode, setIsFreeMode] = useState(false);
-  const [showLogin, setShowLogin] = useState(true);
+  // UI flow: start at welcome screen, then go to login or main UI
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
 
   // Chat state
   const [messages, setMessages] = useState<Message[]>([]);
@@ -72,6 +76,7 @@ export default function App() {
         setUser(session.user);
         setIsAuthenticated(true);
         setIsFreeMode(false);
+        setShowWelcome(false);
         setShowLogin(false);
       }
     } catch (error) {
@@ -107,12 +112,14 @@ export default function App() {
     setIsAuthenticated(true);
     setIsFreeMode(false);
     setShowLogin(false);
+    setShowWelcome(false);
     generateNewChatId();
   };
 
   const handleContinueAsFree = () => {
     setIsFreeMode(true);
     setShowLogin(false);
+    setShowWelcome(false);
     generateNewChatId();
   };
 
@@ -122,7 +129,9 @@ export default function App() {
     setUser(null);
     setIsAuthenticated(false);
     setIsFreeMode(false);
-    setShowLogin(true);
+    // After logout, show welcome screen first
+    setShowLogin(false);
+    setShowWelcome(true);
     setMessages([]);
     setConversationHistory([]);
     setChats([]);
@@ -263,11 +272,23 @@ export default function App() {
     setLanguage(lang);
   };
 
+  if (showWelcome) {
+    return (
+      <WelcomeScreen
+        onLoginClick={() => { setAuthMode('signin'); setShowLogin(true); setShowWelcome(false); }}
+        onSignUpClick={() => { setAuthMode('signup'); setShowLogin(true); setShowWelcome(false); }}
+        onContinueAsGuest={() => { handleContinueAsFree(); }}
+      />
+    );
+  }
+
   if (showLogin) {
     return (
       <LoginPage
         onLogin={handleLogin}
         onContinueAsFree={handleContinueAsFree}
+        initialIsSignUp={authMode === 'signup'}
+        onBack={() => { setShowLogin(false); setShowWelcome(true); }}
       />
     );
   }

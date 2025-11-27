@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Scale, Mail, Lock, User } from 'lucide-react';
 import { supabase } from '../utils/supabase/client';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
@@ -6,9 +6,13 @@ import { projectId, publicAnonKey } from '../utils/supabase/info';
 interface LoginPageProps {
   onLogin: (accessToken: string, user: any) => void;
   onContinueAsFree: () => void;
+  // Optional prop to set initial mode when opening LoginPage from Welcome screen
+  initialIsSignUp?: boolean;
+  // Optional back handler to return to the welcome screen
+  onBack?: () => void;
 }
 
-export function LoginPage({ onLogin, onContinueAsFree }: LoginPageProps) {
+export function LoginPage({ onLogin, onContinueAsFree, initialIsSignUp = false, onBack }: LoginPageProps) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -99,6 +103,11 @@ export function LoginPage({ onLogin, onContinueAsFree }: LoginPageProps) {
     }
   };
 
+  // Support opening login page with a specific mode (sign up) and back navigation
+  useEffect(() => {
+    setIsSignUp(Boolean(initialIsSignUp));
+  }, [initialIsSignUp]);
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-blue-50 to-white w-full">
       <div className="flex-1 flex flex-col items-center justify-center px-6">
@@ -112,7 +121,18 @@ export function LoginPage({ onLogin, onContinueAsFree }: LoginPageProps) {
           Philippine Law AI Assistant
         </p>
 
-        {/* Form */}
+        {/* Back Button + Form */}
+        { /* Show a back link to return to the welcome screen when provided */ }
+        {onBack && (
+          <div className="w-full mb-3 text-left">
+            <button
+              onClick={onBack}
+              className="text-sm text-gray-500 hover:text-gray-700 underline"
+            >
+              {'< Back'}
+            </button>
+          </div>
+        )}
         <div className="w-full bg-white rounded-2xl shadow-lg p-6 mb-4">
           <div className="flex gap-2 mb-6">
             <button
