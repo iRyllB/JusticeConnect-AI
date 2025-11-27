@@ -198,6 +198,16 @@ html {
   user-select: none;
 }
 
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none;
+}
+
 input,
 textarea {
   -webkit-user-select: text;
