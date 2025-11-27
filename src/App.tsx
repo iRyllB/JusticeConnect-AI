@@ -24,18 +24,28 @@ interface Chat {
   updatedAt: string;
 }
 
+const theme = {
+  main: "#0B3C6C",
+  accent: "#F5C629",
+  background: "#F0F8FF",
+  text: "#0B3C6C",
+  subtext: "#4B5563",
+  card: "#DCEAF8",
+  elevated: "#C7D9EA",
+};
+
 export default function App() {
-  // Auth state
+  /* ---------------- AUTH STATE ---------------- */
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [isFreeMode, setIsFreeMode] = useState(false);
-  // UI flow: start at welcome screen, then go to login or main UI
+
   const [showWelcome, setShowWelcome] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
 
-  // Chat state
+  /* ---------------- CHAT STATE ---------------- */
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -43,31 +53,18 @@ export default function App() {
   const [currentChatId, setCurrentChatId] = useState<string>('');
   const [language, setLanguage] = useState('english');
 
-  // UI state
+  /* ---------------- UI STATE ---------------- */
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+  useEffect(() => { scrollToBottom(); }, [messages, isLoading]);
+  useEffect(() => { checkSession(); }, []);
+  useEffect(() => { if (isAuthenticated && !isFreeMode && accessToken) loadChatHistory(); }, [isAuthenticated, isFreeMode]);
 
-  // Check for existing session on mount
-  useEffect(() => {
-    checkSession();
-  }, []);
-
-  // Load chat history when authenticated
-  useEffect(() => {
-    if (isAuthenticated && !isFreeMode && accessToken) {
-      loadChatHistory();
-    }
-  }, [isAuthenticated, isFreeMode]);
-
+  /* ---------------- SESSION ---------------- */
   const checkSession = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -79,8 +76,8 @@ export default function App() {
         setShowWelcome(false);
         setShowLogin(false);
       }
-    } catch (error) {
-      console.error('Error checking session:', error);
+    } catch (err) {
+      console.error("Session error", err);
     }
   };
 
@@ -88,24 +85,21 @@ export default function App() {
     if (!accessToken) return;
 
     try {
-      const response = await fetch(
+      const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-a76efa1a/history`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (res.ok) {
+        const data = await res.json();
         setChats(data.chats || []);
       }
-    } catch (error) {
-      console.error('Error loading chat history:', error);
+    } catch (err) {
+      console.error("Error loading history:", err);
     }
   };
 
+  /* ---------------- AUTH ACTIONS ---------------- */
   const handleLogin = (token: string, userData: any) => {
     setAccessToken(token);
     setUser(userData);
@@ -129,18 +123,16 @@ export default function App() {
     setUser(null);
     setIsAuthenticated(false);
     setIsFreeMode(false);
-    // After logout, show welcome screen first
-    setShowLogin(false);
     setShowWelcome(true);
+    setShowLogin(false);
     setMessages([]);
     setConversationHistory([]);
     setChats([]);
     setCurrentChatId('');
   };
 
-  const generateNewChatId = () => {
-    setCurrentChatId(`chat_${Date.now()}`);
-  };
+  /* ---------------- CHAT MGMT ---------------- */
+  const generateNewChatId = () => setCurrentChatId(`chat_${Date.now()}`);
 
   const handleNewChat = () => {
     setMessages([]);
@@ -152,42 +144,33 @@ export default function App() {
     setCurrentChatId(chat.id);
     setLanguage(chat.language);
     setConversationHistory(chat.messages);
-    
-    // Convert history to display messages
-    const displayMessages: Message[] = chat.messages.map((msg, idx) => ({
-      id: `${chat.id}_${idx}`,
+
+    setMessages(chat.messages.map((msg, i) => ({
+      id: `${chat.id}_${i}`,
       text: msg.content,
-      isUser: msg.role === 'user'
-    }));
-    
-    setMessages(displayMessages);
+      isUser: msg.role === 'user',
+    })));
   };
 
   const handleDeleteChat = async (chatId: string) => {
     if (!accessToken) return;
 
     try {
-      const response = await fetch(
+      const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-a76efa1a/chat/${chatId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
-        }
+        { method: 'DELETE', headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      if (response.ok) {
+      if (res.ok) {
         setChats(prev => prev.filter(c => c.id !== chatId));
-        if (currentChatId === chatId) {
-          handleNewChat();
-        }
+        if (currentChatId === chatId) handleNewChat();
       }
-    } catch (error) {
-      console.error('Error deleting chat:', error);
+    } catch (err) {
+      console.error("Delete chat error:", err);
     }
   };
 
+  /* ---------------- SEND MESSAGE ---------------- */
   const sendMessage = async (text: string) => {
     if (!text.trim() || isLoading) return;
 
@@ -202,7 +185,7 @@ export default function App() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
+      const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-a76efa1a/chat`,
         {
           method: 'POST',
@@ -212,21 +195,20 @@ export default function App() {
           },
           body: JSON.stringify({
             message: text.trim(),
-            conversationHistory: conversationHistory,
-            language: language,
+            conversationHistory,
+            language,
             userId: isAuthenticated && !isFreeMode ? user?.id : null,
             chatId: isAuthenticated && !isFreeMode ? currentChatId : null
           })
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error from server:', errorData);
-        throw new Error(errorData.error || 'Failed to get response');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Server Error");
       }
 
-      const data = await response.json();
+      const data = await res.json();
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -237,19 +219,17 @@ export default function App() {
       setMessages(prev => [...prev, aiMessage]);
       setConversationHistory(data.conversationHistory);
 
-      // Reload chat history if authenticated
-      if (isAuthenticated && !isFreeMode) {
-        loadChatHistory();
-      }
+      if (isAuthenticated && !isFreeMode) loadChatHistory();
 
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
+    } catch (err) {
+      console.error(err);
+
+      setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
-        text: 'Sorry, I encountered an error. Please try again.',
+        text: "Sorry, something went wrong.",
         isUser: false
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      }]);
+
     } finally {
       setIsLoading(false);
     }
@@ -260,24 +240,14 @@ export default function App() {
     sendMessage(inputValue);
   };
 
-  const handleSuggestedQuestion = (question: string) => {
-    sendMessage(question);
-  };
-
-  const handleQuickAction = (question: string) => {
-    sendMessage(question);
-  };
-
-  const handleLanguageChange = (lang: string) => {
-    setLanguage(lang);
-  };
+  /* ---------------- RENDER ---------------- */
 
   if (showWelcome) {
     return (
       <WelcomeScreen
         onLoginClick={() => { setAuthMode('signin'); setShowLogin(true); setShowWelcome(false); }}
         onSignUpClick={() => { setAuthMode('signup'); setShowLogin(true); setShowWelcome(false); }}
-        onContinueAsGuest={() => { handleContinueAsFree(); }}
+        onContinueAsGuest={handleContinueAsFree}
       />
     );
   }
@@ -293,13 +263,19 @@ export default function App() {
     );
   }
 
+  /* ---------------- MAIN UI ---------------- */
+
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-blue-50 to-white w-full">
+    <div
+      className="flex flex-col h-screen w-full"
+      style={{ backgroundColor: theme.background }}
+    >
+      {/* Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         language={language}
-        onLanguageChange={handleLanguageChange}
+        onLanguageChange={setLanguage}
         isFreeMode={isFreeMode}
         onLogout={handleLogout}
         onLoadChat={handleLoadChat}
@@ -311,104 +287,133 @@ export default function App() {
       />
 
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-4 shadow-lg">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-            <Scale className="w-6 h-6 text-blue-600" />
-          </div>
-          <div className="flex-1">
-            <h1 className="font-semibold">JusticeConnect</h1>
-            <p className="text-xs text-blue-100">
-              {isFreeMode ? 'Free Mode' : `Philippine Law AI • ${language.charAt(0).toUpperCase() + language.slice(1)}`}
-            </p>
-          </div>
+      <div
+        className="w-full px-4 py-4 shadow-md flex items-center gap-3"
+        style={{ backgroundColor: theme.main }}
+      >
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="w-10 h-10 flex items-center justify-center rounded-full transition-all hover:opacity-80"
+        >
+          <Menu className="w-6 h-6 text-white" />
+        </button>
+
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: theme.accent }}
+        >
+          <Scale className="w-6 h-6" style={{ color: theme.main }} />
+        </div>
+
+        <div className="flex-1">
+          <h1 className="font-semibold text-white">JusticeConnect</h1>
+          <p className="text-xs opacity-80 text-white">
+            {isFreeMode ? "Free Mode" : `Philippine Law AI • ${language}`}
+          </p>
         </div>
       </div>
 
-      {/* Chat Area */}
+      {/* Chat area */}
       <div className="flex-1 overflow-y-auto">
         {messages.length === 0 ? (
+          /* Empty state */
           <div className="flex flex-col h-full">
             <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <Scale className="w-10 h-10 text-blue-600" />
+
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
+                style={{ backgroundColor: theme.card }}
+              >
+                <Scale className="w-10 h-10" style={{ color: theme.main }} />
               </div>
-              <h2 className="text-gray-800 mb-2">
-                {language === 'tagalog' ? 'Kumusta! Maligayang pagdating sa JusticeConnect' : 
-                 language === 'bisaya' ? 'Kumusta! Malipayon nga pag-abot sa JusticeConnect' :
-                 'Welcome to JusticeConnect'}
+
+              <h2 className="text-lg font-semibold" style={{ color: theme.text }}>
+                Welcome to JusticeConnect
               </h2>
-              <p className="text-sm text-gray-600 mb-6">
-                {language === 'tagalog' ? 'Tanungin mo ako tungkol sa batas ng Pilipinas' :
-                 language === 'bisaya' ? 'Pangutana ko bahin sa balaod sa Pilipinas' :
-                 'Ask me anything about Philippine law'}
+
+              <p className="text-sm mt-2" style={{ color: theme.subtext }}>
+                Ask me anything about Philippine law
               </p>
+
               {isFreeMode && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 text-sm text-amber-800">
+                <div
+                  className="mt-4 px-4 py-3 rounded-lg text-sm"
+                  style={{
+                    backgroundColor: theme.elevated,
+                    color: theme.text,
+                    border: `1px solid ${theme.main}20`,
+                  }}
+                >
                   ⚠️ Free Mode: Chat history is disabled
                 </div>
               )}
             </div>
+
             <div className="mt-auto">
-              <QuickActions onActionClick={handleQuickAction} language={language} />
-              <p className="text-xs text-gray-500 text-center px-4 pb-4">
-                {language === 'tagalog' ? '⚠️ Para sa pangkalahatang impormasyon lamang, hindi legal advice' :
-                 language === 'bisaya' ? '⚠️ Para sa general nga impormasyon lamang, dili legal advice' :
-                 '⚠️ For general information only, not legal advice'}
+              <QuickActions onActionClick={sendMessage} language={language} />
+              <p
+                className="text-xs text-center py-4"
+                style={{ color: theme.subtext }}
+              >
+                ⚠️ For general information only, not legal advice
               </p>
             </div>
           </div>
         ) : (
+          /* With chat messages */
           <div className="relative">
             <div className="px-4 py-4">
-              {messages.map(message => (
-                <ChatMessage
-                  key={message.id}
-                  message={message.text}
-                  isUser={message.isUser}
-                />
+              {messages.map(m => (
+                <ChatMessage key={m.id} message={m.text} isUser={m.isUser} />
               ))}
+
               {isLoading && <TypingIndicator />}
               <div ref={messagesEndRef} />
             </div>
-            
-            {/* Floating New Chat Button */}
+
+            {/* Floating new chat button */}
             <button
               onClick={handleNewChat}
-              className="fixed top-20 right-4 bg-blue-600 text-white p-3 rounded-full shadow-lg hover:bg-blue-700 transition-all hover:scale-110 z-30"
-              title="Start New Chat"
+              className="fixed top-20 right-4 p-3 rounded-full shadow-lg transition-all hover:scale-110 z-30"
+              style={{ backgroundColor: theme.accent }}
+              title="New Chat"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-5 h-5" style={{ color: theme.main }} />
             </button>
           </div>
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-gray-200 bg-white px-4 py-3 shadow-lg">
+      {/* Input */}
+      <div
+        className="px-4 py-3 shadow-md border-t"
+        style={{ backgroundColor: theme.card, borderColor: theme.elevated }}
+      >
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
             type="text"
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder={
-              language === 'tagalog' ? 'Tanungin ang tungkol sa batas...' :
-              language === 'bisaya' ? 'Pangutana bahin sa balaod...' :
-              'Ask about Philippine law...'
-            }
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onChange={e => setInputValue(e.target.value)}
+            className="flex-1 px-4 py-3 rounded-full focus:ring-2 outline-none"
+            style={{
+              border: `1px solid ${theme.elevated}`,
+              backgroundColor: "white",
+              color: theme.text,
+              focus: { borderColor: theme.main }
+            }}
+            placeholder="Ask about Philippine law..."
             disabled={isLoading}
           />
+
           <button
             type="submit"
             disabled={!inputValue.trim() || isLoading}
-            className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            className="w-12 h-12 rounded-full flex items-center justify-center transition-all"
+            style={{
+              backgroundColor: theme.main,
+              color: "white",
+              opacity: !inputValue.trim() || isLoading ? 0.4 : 1
+            }}
           >
             <Send className="w-5 h-5" />
           </button>

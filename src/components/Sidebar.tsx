@@ -89,18 +89,20 @@ export function Sidebar({
 
   return (
     <>
-      {/* overlay */}
+      {/* OPTIONAL: Overlay with NO closing action */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40"
-          onClick={onClose}
+          className="fixed inset-0 bg-black/40 z-40 pointer-events-none"
         />
       )}
 
-      {/* SIDEBAR */}
+      {/* SIDEBAR (FULL HEIGHT) */}
       <div
-        className={`fixed top-0 left-0 h-full w-full sm:w-80 z-50 transform transition-transform duration-300 shadow-xl`}
+        className="fixed top-0 left-0 z-50 transition-transform duration-300 shadow-xl sm:w-80"
         style={{
+          height: "100vh",
+          width: "85%",
+          maxWidth: "320px",
           backgroundColor: theme.background,
           boxShadow: "4px 0px 12px rgba(0,0,0,0.15)",
           transform: isOpen ? "translateX(0)" : "translateX(-100%)",
@@ -137,16 +139,10 @@ export function Sidebar({
               </div>
 
               <div className="flex-1">
-                <p
-                  className="font-bold truncate"
-                  style={{ color: theme.main }}
-                >
+                <p className="font-bold truncate" style={{ color: theme.main }}>
                   {user.user_metadata?.name || "User"}
                 </p>
-                <p
-                  className="text-xs truncate"
-                  style={{ color: theme.subtext }}
-                >
+                <p className="text-xs truncate" style={{ color: theme.subtext }}>
                   {user.email}
                 </p>
               </div>
@@ -165,10 +161,11 @@ export function Sidebar({
                   onClick={() => setActiveTab(tab as any)}
                   className="flex-1 py-3 px-4 flex items-center justify-center gap-2 transition-colors"
                   style={{
-                    color:
-                      activeTab === tab ? theme.main : theme.subtext,
+                    color: activeTab === tab ? theme.main : theme.subtext,
                     borderBottom:
-                      activeTab === tab ? `3px solid ${theme.accent}` : "3px solid transparent",
+                      activeTab === tab
+                        ? `3px solid ${theme.accent}`
+                        : "3px solid transparent",
                     fontWeight: activeTab === tab ? "bold" : "500",
                   }}
                 >
@@ -194,16 +191,10 @@ export function Sidebar({
                     border: `1px solid ${theme.elevated}`,
                   }}
                 >
-                  <h3
-                    className="font-bold"
-                    style={{ color: theme.main }}
-                  >
+                  <h3 className="font-bold" style={{ color: theme.main }}>
                     Free Mode
                   </h3>
-                  <p
-                    className="text-sm mt-2"
-                    style={{ color: theme.subtext }}
-                  >
+                  <p className="text-sm mt-2" style={{ color: theme.subtext }}>
                     Sign in to unlock chat history and language preferences
                   </p>
                 </div>
@@ -226,7 +217,6 @@ export function Sidebar({
                       key={lang.code}
                       onClick={() => {
                         onLanguageChange(lang.code);
-                        onClose();
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all"
                       style={{
@@ -346,7 +336,6 @@ export function Sidebar({
             )}
           </div>
 
-          {/* FOOTER */}
           {!isFreeMode && (
             <div
               className="p-4 border-t"
